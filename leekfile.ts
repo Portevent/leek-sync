@@ -2,6 +2,7 @@ class LeekFile{
     public name: string
     public id: number
     public timestamp: number
+    public code: string = "";
     public folder: boolean = true;
 
     constructor(name: string, id: number, timestamp: number){

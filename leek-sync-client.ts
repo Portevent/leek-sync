@@ -56,6 +56,7 @@ class LeekSyncClient{
             this.leekwarsFilesystem[name] = new LeekScript(name, aiCode.id, aiCode.code, aiCode.modified);
         });
     }
+
     private async updateLocalFiles(){
         // Turn on watcher
         // Wait to list all already existing file
@@ -67,4 +68,59 @@ class LeekSyncClient{
         // update hashes
     }
 
+    private async pushToLeekwars(filesystem: {[file: string]: LeekFile}){
+        const idsToRemove = [];
+        // Remove in leekwars all files that aren't present in the new filesystem anymore
+        Object.keys(this.leekwarsFilesystem).forEach(filename => {
+            if (filename in filesystem) return;
+            idsToRemove.push(this.leekwarsFilesystem[filename].id);
+            delete this.leekwarsFilesystem[filename];
+        })
+
+        await this.nodeLeekClient.deleteFiles(idsToRemove);
+        await this.nodeLeekClient.clearBin();
+        
+        // Update or create file
+        await Promise.all(
+            Object.keys(filesystem).map(filename => this.createOrUpdateFileInLeekwars(filesystem[filename]));
+        );
+    }
+
+    private async createOrUpdateFileInLeekwars(file: LeekFile){
+        if (file.name in this.leekwarsFilesystem){
+            if (file.folder) return;
+
+            return this.updateFileInLeekwars(file);
+        }else{
+            if (file.folder) createFolderInLeekwars(file);
+            this.nodeLeekClient.createFile(file.code).then((result) => {
+                file.id = result.id;
+                file.timestamp = result.modified;
+            });
+        }
+    }
+
+    private async updateFileInLeekwars(file: LeekScript){
+        return this.nodeLeekClient.updateFile(file.id, file.code).then((result) => {
+            file.timestamp = result.modified;
+            this.leekwarsFilesystem[file.id] = file;
+        })
+    }
+
+
+    private async createFolderInLeekwars(file: LeekFolder){
+        return this.nodeLeekClient.createFolder(file.name, (await this.createOrGetFolderInLeekwars(file.parent)).id).then((result) => {
+            file.id = result.id;
+            this.leekwarsFilesystem[result.id] = file;
+        })
+    }
+
+
+    private async createFileInLeekwars(file: LeekScript){
+       // TODO
+    }
+
+    private isFolder(filename: string) : boolean{
+        return filename[-1] == "/";
+    }
 }
