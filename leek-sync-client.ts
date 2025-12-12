@@ -46,7 +46,7 @@ class LeekSyncClient{
 
         (await this.nodeLeekClient.fetchFiles(fetchRequest)).forEach(aiCode => {
             const name = filesToFetch[aiCode.id];
-            this.leekwarsFiles[name] = new LeekFile(name, aiCode.id, aiCode.code, aiCode.modified);
+            this.leekwarsFiles[name] = new LeekScript(name, aiCode.id, aiCode.code, aiCode.modified);
         });
     }
 
